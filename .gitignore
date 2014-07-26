@@ -1,0 +1,7 @@
+
+[Pp]ackages/*
+![Pp]ackages/*.config
+*.suo
+*.user
+[Bb]in
+[Oo]bj
