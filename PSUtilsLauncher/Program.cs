@@ -27,7 +27,19 @@ namespace PSUtilsLauncher
         {
             if(args.Length > 0 && args[0] == "clean")
             {
-                Clean(args);
+                try
+                {
+                    Clean(args);
+                }
+                catch(Exception ex)
+                {
+                    var exp = ex;
+                    while(exp != null)
+                    {
+                        MessageBox.Show(string.Format("{0}\n{1}", exp.Message, exp.StackTrace), exp.GetType().FullName);
+                        exp = exp.InnerException;
+                    }
+                }
                 return;
             }
 
@@ -260,14 +272,22 @@ namespace PSUtilsLauncher
 
             try
             {
-                Process.GetProcessById(parentPid);
+                Process.GetProcessById(parentPid).WaitForExit();
             }
             catch(ArgumentException)
             { }
 
-
             foreach(var file in args.Skip(2))
-                File.Delete(file);
+            {
+                try
+                {
+                    File.Delete(file);
+                }
+                catch(Exception ex)
+                {
+                    MessageBox.Show(string.Format("Could not delete file '{0}': {1}", file, ex.Message), "PSUtils Launcher");
+                }
+            }
         }
 
     }
