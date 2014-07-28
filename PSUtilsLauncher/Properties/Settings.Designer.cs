@@ -25,7 +25,7 @@ namespace PSUtilsLauncher.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("C:\\psscripts\\PSUtils")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://github.com/ecsousa/PSUtils.git")]
         public string PSUtilsRepository {
             get {
                 return ((string)(this["PSUtilsRepository"]));

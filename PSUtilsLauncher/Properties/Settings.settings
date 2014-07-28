@@ -3,7 +3,7 @@
   <Profiles />
   <Settings>
     <Setting Name="PSUtilsRepository" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">C:\psscripts\PSUtils</Value>
+      <Value Profile="(Default)">http://github.com/ecsousa/PSUtils.git</Value>
     </Setting>
     <Setting Name="ExecutionPolicy" Type="System.String" Scope="Application">
       <Value Profile="(Default)">Unrestricted</Value>
