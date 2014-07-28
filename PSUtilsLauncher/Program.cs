@@ -193,8 +193,16 @@ namespace PSUtilsLauncher
         {
             using(var repo = new Repository(this.PSUtilsPath))
             {
-                repo.Fetch("origin");
-                repo.Checkout("master");
+                repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
+                    new PullOptions
+                    {
+                        FetchOptions = null,
+                        MergeOptions = new MergeOptions
+                        {
+                            FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
+                        }
+                    });
+
             }
 
             return true;
