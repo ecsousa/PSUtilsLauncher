@@ -1,6 +1,7 @@
 # PSUtils Launcher
 
 This is PSUtils Launcher, a helper for using my other project: [PSUtils](https://github.com/ecsousa/PSUtils).
+To grab it, just go to [Releases](https://github.com/ecsousa/PSUtilsLauncher/releases)!
 
 When started, it will download PSUtils repository from GitHub (if not exists). If ConEmu directory does not exist, will ask you whether you want to download it.
 
