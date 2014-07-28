@@ -31,7 +31,15 @@ namespace PSUtilsLauncher
             }
 
             AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
-            new Program().Run();
+
+            try
+            {
+                new Program().Run();
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show(string.Format("Error: {0}", ex.Message), "PSUtils Launcher");
+            }
 
         }
 
@@ -66,11 +74,11 @@ namespace PSUtilsLauncher
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
             this.FilesToClean = new List<string>();
 
-            if(!this.EnsureRepository())
-                return;
-
             try
             {
+                if(!this.EnsureRepository())
+                    return;
+
                 if(!File.Exists(this.ConEmuExecutable))
                 {
                     if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
@@ -96,20 +104,22 @@ namespace PSUtilsLauncher
         {
             var tempFile = Path.GetTempFileName();
 
-            this.ExecuteProcess(this.PowerShellPath, string.Format("-Command Invoke-WebRequest '{0}' -OutFile '{1}'", this.Settings.ConEmuDownloadUrl, tempFile))
-                .WaitForExit();
+            var sevenZipPath = Path.Combine(this.PSUtilsPath, @"7z\7z.exe");
+
+            if(!Directory.Exists(this.ConEmuPath))
+                Directory.CreateDirectory(this.ConEmuPath);
 
             try
             {
-                this.WriteBinary("_7z.dll", "7z.dll");
+                this.ExecuteProcess(this.PowerShellPath,
+                    string.Format("-Command Invoke-WebRequest '{0}' -OutFile '{1}'; pushd '{2}'; & '{3}' x '{1}'",
+                        this.Settings.ConEmuDownloadUrl,
+                        tempFile,
+                        this.ConEmuPath,
+                        sevenZipPath
+                    ))
+                    .WaitForExit();
 
-                using(var sevenZip = new SevenZip.SevenZipExtractor(tempFile))
-                {
-                    if(!Directory.Exists(this.ConEmuPath))
-                        Directory.CreateDirectory(this.ConEmuPath);
-
-                    sevenZip.ExtractArchive(this.ConEmuPath);
-                }
             }
             finally
             {
@@ -127,8 +137,10 @@ namespace PSUtilsLauncher
                 if(MessageBox.Show("PSUtils repository not found. Do you want to download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
                     return false;
             }
-            else {
-                if(!Repository.IsValid(this.PSUtilsPath)) {
+            else
+            {
+                if(!Repository.IsValid(this.PSUtilsPath))
+                {
                     if(MessageBox.Show("PSUtils repository not valid. Do you want to DELETE current directory and re-download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
                         return false;
 
@@ -140,7 +152,8 @@ namespace PSUtilsLauncher
                 }
             }
 
-            try {
+            try
+            {
                 Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath);
             }
             catch
@@ -159,9 +172,10 @@ namespace PSUtilsLauncher
             var prefix = IntPtr.Size == 8 ? "x64.git2-" : "x86.git2-";
 
             foreach(var resource in typeof(Program).Assembly.GetManifestResourceNames()
-                .Where(r => r.StartsWith(prefix))) {
+                .Where(r => r.StartsWith(prefix)))
+            {
 
-                    this.WriteBinary(resource, resource.Substring(4));
+                this.WriteBinary(resource, resource.Substring(4));
             }
 
         }
@@ -191,11 +205,11 @@ namespace PSUtilsLauncher
             var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
 
             this.ExecuteProcess(this.ConEmuExecutable, arguments);
-       }
+        }
 
         private void StartWithPowerShell()
         {
-            
+
             var arguments = string.Format("-ExecutionPolicy {0} -NoExit -Command \"Import-Module '{1}'\"", this.Settings.ExecutionPolicy, this.PSUtilsPath);
 
             this.ExecuteProcess(this.PowerShellPath, arguments);
@@ -230,7 +244,7 @@ namespace PSUtilsLauncher
             }
             catch(ArgumentException)
             { }
-            
+
 
             foreach(var file in args.Skip(2))
                 File.Delete(file);

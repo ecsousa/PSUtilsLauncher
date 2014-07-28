@@ -42,9 +42,6 @@
     <Reference Include="LibGit2Sharp">
       <HintPath>..\packages\LibGit2Sharp.0.18.1.0\lib\net40\LibGit2Sharp.dll</HintPath>
     </Reference>
-    <Reference Include="SevenZipSharp">
-      <HintPath>..\packages\SevenZipSharp.0.64\lib\SevenZipSharp.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Windows.Forms" />
@@ -68,7 +65,6 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="7z.dll" />
     <Content Include="photo.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -93,9 +89,6 @@
       </EmbeddedResource>
       <EmbeddedResource Include="@(NativeBinaries_x64)">
         <LogicalName>x64.%(NativeBinaries_x64.Filename)%(NativeBinaries_x64.Extension)</LogicalName>
-      </EmbeddedResource>
-      <EmbeddedResource Include="7z.dll">
-        <LogicalName>_7z.dll</LogicalName>
       </EmbeddedResource>
     </ItemGroup>
   </Target>
