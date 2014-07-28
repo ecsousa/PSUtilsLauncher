@@ -200,18 +200,21 @@ namespace PSUtilsLauncher
 
         private bool UpdateRepository()
         {
-            using(var repo = new Repository(this.PSUtilsPath))
+            if(this.Settings.AutoUpdateModule)
             {
-                repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
-                    new PullOptions
-                    {
-                        FetchOptions = null,
-                        MergeOptions = new MergeOptions
+                using(var repo = new Repository(this.PSUtilsPath))
+                {
+                    repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
+                        new PullOptions
                         {
-                            FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
-                        }
-                    });
+                            FetchOptions = null,
+                            MergeOptions = new MergeOptions
+                            {
+                                FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
+                            }
+                        });
 
+                }
             }
 
             return true;

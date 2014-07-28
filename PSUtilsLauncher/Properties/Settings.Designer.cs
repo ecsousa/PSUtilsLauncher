@@ -41,15 +41,21 @@ namespace PSUtilsLauncher.Properties {
             }
         }
         
-        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("http://conemu.codeplex.com/downloads/get/880090")]
         public string ConEmuDownloadUrl {
             get {
                 return ((string)(this["ConEmuDownloadUrl"]));
             }
-            set {
-                this["ConEmuDownloadUrl"] = value;
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AutoUpdateModule {
+            get {
+                return ((bool)(this["AutoUpdateModule"]));
             }
         }
     }

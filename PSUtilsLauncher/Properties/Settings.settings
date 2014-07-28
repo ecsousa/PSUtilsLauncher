@@ -8,8 +8,11 @@
     <Setting Name="ExecutionPolicy" Type="System.String" Scope="Application">
       <Value Profile="(Default)">Unrestricted</Value>
     </Setting>
-    <Setting Name="ConEmuDownloadUrl" Type="System.String" Scope="User">
+    <Setting Name="ConEmuDownloadUrl" Type="System.String" Scope="Application">
       <Value Profile="(Default)">http://conemu.codeplex.com/downloads/get/880090</Value>
+    </Setting>
+    <Setting Name="AutoUpdateModule" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
     </Setting>
   </Settings>
 </SettingsFile>
