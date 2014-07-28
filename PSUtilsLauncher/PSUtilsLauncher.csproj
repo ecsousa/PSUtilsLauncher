@@ -68,20 +68,37 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="7z.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
+    <Content Include="7z.dll" />
     <Content Include="photo.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-if not exist "$(TargetDir)NativeBinaries" md "$(TargetDir)NativeBinaries"
-if not exist "$(TargetDir)NativeBinaries\x86" md "$(TargetDir)NativeBinaries\x86"
-xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\x86\*.*" "$(TargetDir)NativeBinaries\x86"
-if not exist "$(TargetDir)NativeBinaries\amd64" md "$(TargetDir)NativeBinaries\amd64"
-xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\amd64\*.*" "$(TargetDir)NativeBinaries\amd64"</PostBuildEvent>
+    <PreBuildEvent>
+      if not exist "$(TargetDir)NativeBinaries" md "$(TargetDir)NativeBinaries"
+      if not exist "$(TargetDir)NativeBinaries\x86" md "$(TargetDir)NativeBinaries\x86"
+      xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\x86\*.*" "$(TargetDir)NativeBinaries\x86"
+      if not exist "$(TargetDir)NativeBinaries\amd64" md "$(TargetDir)NativeBinaries\amd64"
+      xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\amd64\*.*" "$(TargetDir)NativeBinaries\amd64"
+    </PreBuildEvent>
   </PropertyGroup>
+  <Target Name="AfterResolveReferences">
+    <ItemGroup>
+      <EmbeddedResource Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
+        <LogicalName>%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
+      </EmbeddedResource>
+      <NativeBinaries_x86 Include="$(TargetDir)NativeBinaries\x86\*.dll" />
+      <NativeBinaries_x64 Include="$(TargetDir)NativeBinaries\amd64\*.dll" />
+      <EmbeddedResource Include="@(NativeBinaries_x86)">
+        <LogicalName>x86.%(NativeBinaries_x86.Filename)%(NativeBinaries_x86.Extension)</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="@(NativeBinaries_x64)">
+        <LogicalName>x64.%(NativeBinaries_x64.Filename)%(NativeBinaries_x64.Extension)</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="7z.dll">
+        <LogicalName>_7z.dll</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

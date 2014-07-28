@@ -1,9 +1,12 @@
 ﻿using LibGit2Sharp;
 using System;
+using System.Linq;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 
@@ -20,9 +23,32 @@ namespace PSUtilsLauncher
 
         static void Main(string[] args)
         {
+            AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
             new Program().Run();
 
         }
+
+        private static Assembly OnResolveAssembly(object sender, ResolveEventArgs args)
+        {
+            Assembly executingAssembly = Assembly.GetExecutingAssembly();
+            AssemblyName assemblyName = new AssemblyName(args.Name);
+            string path = assemblyName.Name + ".dll";
+            if(assemblyName.CultureInfo.Equals(CultureInfo.InvariantCulture) == false)
+            {
+                path = String.Format(@"{0}\{1}", assemblyName.CultureInfo, path);
+            }
+            using(Stream stream = executingAssembly.GetManifestResourceStream(path))
+            {
+                if(stream == null)
+                    return null;
+
+
+                byte[] assemblyRawBytes = new byte[stream.Length];
+                stream.Read(assemblyRawBytes, 0, assemblyRawBytes.Length);
+                return Assembly.Load(assemblyRawBytes);
+            }
+        }
+
         private void Run()
         {
             this.MyDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -58,6 +84,7 @@ namespace PSUtilsLauncher
 
             try
             {
+                this.WriteBinary("_7z.dll", "7z.dll");
 
                 using(var sevenZip = new SevenZip.SevenZipExtractor(tempFile))
                 {
@@ -76,6 +103,8 @@ namespace PSUtilsLauncher
 
         private bool EnsureRepository()
         {
+            this.WriteGitBinary();
+
             if(!Directory.Exists(this.PSUtilsPath))
             {
                 if(MessageBox.Show("PSUtils repository not found. Do you want to download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
@@ -106,6 +135,25 @@ namespace PSUtilsLauncher
             }
 
             return true;
+        }
+
+        private void WriteGitBinary()
+        {
+            var prefix = IntPtr.Size == 8 ? "x64.git2-" : "x86.git2-";
+
+            foreach(var resource in typeof(Program).Assembly.GetManifestResourceNames()
+                .Where(r => r.StartsWith(prefix))) {
+
+                    this.WriteBinary(resource, resource.Substring(4));
+            }
+
+        }
+
+        private void WriteBinary(string resource, string fileName)
+        {
+            using(var stream = typeof(Program).Assembly.GetManifestResourceStream(resource))
+            using(var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+                stream.CopyTo(fileStream);
         }
 
         private bool UpdateRepository()
