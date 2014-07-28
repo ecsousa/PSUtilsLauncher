@@ -9,6 +9,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
+using System.IO.Compression;
 
 namespace PSUtilsLauncher
 {
@@ -57,10 +58,17 @@ namespace PSUtilsLauncher
                 if(stream == null)
                     return null;
 
+                using(var gzip = new GZipStream(stream, CompressionMode.Decompress))
+                using(var memory = new MemoryStream())
+                {
+                    gzip.CopyTo(memory);
 
-                byte[] assemblyRawBytes = new byte[stream.Length];
-                stream.Read(assemblyRawBytes, 0, assemblyRawBytes.Length);
-                return Assembly.Load(assemblyRawBytes);
+                    byte[] assemblyRawBytes = new byte[memory.Length];
+                    memory.Seek(0, SeekOrigin.Begin);
+                    memory.Read(assemblyRawBytes, 0, assemblyRawBytes.Length);
+                    return Assembly.Load(assemblyRawBytes);
+                }
+
             }
         }
 
@@ -70,7 +78,7 @@ namespace PSUtilsLauncher
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
-            this.ConEmuExecutable = Path.Combine((Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
+            this.ConEmuExecutable = Path.Combine(this.ConEmuPath, (Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
             this.FilesToClean = new List<string>();
 
@@ -183,8 +191,9 @@ namespace PSUtilsLauncher
         private void WriteBinary(string resource, string fileName)
         {
             using(var stream = typeof(Program).Assembly.GetManifestResourceStream(resource))
+            using(var gzip = new GZipStream(stream, CompressionMode.Decompress))
             using(var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
-                stream.CopyTo(fileStream);
+                gzip.CopyTo(fileStream);
 
             this.FilesToClean.Add(fileName);
         }

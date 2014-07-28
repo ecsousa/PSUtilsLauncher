@@ -83,6 +83,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="gzip.exe" />
     <Content Include="photo.ico" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
@@ -97,11 +98,18 @@
   </PropertyGroup>
   <Target Name="AfterResolveReferences">
     <ItemGroup>
-      <EmbeddedResource Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
+      <GZip Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'" />
+      <GZip Include="$(TargetDir)NativeBinaries\x86\*.dll" />
+    </ItemGroup>
+
+    <Exec Command="$(ProjectDir)gzip.exe -fk %(GZip.Identity)" />
+    
+    <ItemGroup>
+      <EmbeddedResource Include="%(ReferenceCopyLocalPaths.Identity).gz" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
         <LogicalName>%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
       </EmbeddedResource>
       <NativeBinaries Include="$(TargetDir)NativeBinaries\x86\*.dll" />
-      <EmbeddedResource Include="@(NativeBinaries)">
+      <EmbeddedResource Include="%(NativeBinaries.Identity).gz">
         <LogicalName>gitlib:%(NativeBinaries.Filename)%(NativeBinaries.Extension)</LogicalName>
       </EmbeddedResource>
     </ItemGroup>
