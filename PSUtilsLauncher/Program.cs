@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LibGit2Sharp;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -31,7 +32,8 @@ namespace PSUtilsLauncher
             this.ConEmuExecutable = Path.Combine(this.ConEmuPath, IntPtr.Size == 8 ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
 
-            this.EnsureRepository();
+            if(!this.EnsureRepository())
+                return;
 
             if(!File.Exists(this.ConEmuExecutable))
             {
@@ -72,12 +74,49 @@ namespace PSUtilsLauncher
             }
         }
 
-        private void EnsureRepository()
+        private bool EnsureRepository()
         {
             if(!Directory.Exists(this.PSUtilsPath))
             {
-                LibGit2Sharp.Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath);
+                if(MessageBox.Show("PSUtils repository not found. Do you want to download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
+                    return false;
             }
+            else {
+                if(!Repository.IsValid(this.PSUtilsPath)) {
+                    if(MessageBox.Show("PSUtils repository not valid. Do you want to DELETE current directory and re-download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
+                        return false;
+
+                    Directory.Delete(this.PSUtilsPath, true);
+                }
+                else
+                {
+                    return this.UpdateRepository();
+                }
+            }
+
+            try {
+                Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath);
+            }
+            catch
+            {
+                if(Directory.Exists(this.PSUtilsPath))
+                    Directory.Delete(this.PSUtilsPath, true);
+
+                throw;
+            }
+
+            return true;
+        }
+
+        private bool UpdateRepository()
+        {
+            using(var repo = new Repository(this.PSUtilsPath))
+            {
+                repo.Fetch("origin");
+                repo.Checkout("master");
+            }
+
+            return true;
         }
 
         private void StartWithConEmu()
