@@ -70,7 +70,7 @@ namespace PSUtilsLauncher
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
-            this.ConEmuExecutable = Path.Combine(this.ConEmuPath, IntPtr.Size == 8 ? "ConEmu64.exe" : "ConEmu.exe");
+            this.ConEmuExecutable = Path.Combine((Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
             this.FilesToClean = new List<string>();
 
@@ -169,13 +169,13 @@ namespace PSUtilsLauncher
 
         private void WriteGitBinary()
         {
-            var prefix = IntPtr.Size == 8 ? "x64.git2-" : "x86.git2-";
+            var prefix = "gitlib:";
 
             foreach(var resource in typeof(Program).Assembly.GetManifestResourceNames()
                 .Where(r => r.StartsWith(prefix)))
             {
 
-                this.WriteBinary(resource, resource.Substring(4));
+                this.WriteBinary(resource, resource.Substring(prefix.Length));
             }
 
         }
