@@ -20,9 +20,16 @@ namespace PSUtilsLauncher
         private string ConEmuExecutable;
         private string ConEmuPath;
         private string PowerShellPath;
+        private List<string> FilesToClean;
 
         static void Main(string[] args)
         {
+            if(args.Length > 0 && args[0] == "clean")
+            {
+                Clean(args);
+                return;
+            }
+
             AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
             new Program().Run();
 
@@ -57,24 +64,34 @@ namespace PSUtilsLauncher
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
             this.ConEmuExecutable = Path.Combine(this.ConEmuPath, IntPtr.Size == 8 ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
+            this.FilesToClean = new List<string>();
 
             if(!this.EnsureRepository())
                 return;
 
-            if(!File.Exists(this.ConEmuExecutable))
+            try
             {
-                if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
+                if(!File.Exists(this.ConEmuExecutable))
                 {
-                    this.StartWithPowerShell();
-                    return;
+                    if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
+                    {
+                        this.StartWithPowerShell();
+                        return;
+                    }
+
+                    this.DownloadConemu();
                 }
 
-                this.DownloadConemu();
+                this.StartWithConEmu();
+            }
+            finally
+            {
+                if(this.FilesToClean.Count > 0)
+                    this.LaunchCleaner();
             }
 
-            this.StartWithConEmu();
-
         }
+
         private void DownloadConemu()
         {
             var tempFile = Path.GetTempFileName();
@@ -154,6 +171,8 @@ namespace PSUtilsLauncher
             using(var stream = typeof(Program).Assembly.GetManifestResourceStream(resource))
             using(var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
                 stream.CopyTo(fileStream);
+
+            this.FilesToClean.Add(fileName);
         }
 
         private bool UpdateRepository()
@@ -192,5 +211,30 @@ namespace PSUtilsLauncher
 
             return Process.Start(psi);
         }
+
+        private void LaunchCleaner()
+        {
+            var programName = new Uri(typeof(Program).Assembly.CodeBase).Segments.Last();
+            this.ExecuteProcess(
+                Process.GetCurrentProcess().MainModule.FileName,
+                string.Format("clean {0} {1}", Process.GetCurrentProcess().Id, string.Join(" ", this.FilesToClean))
+                );
+        }
+        private static void Clean(string[] args)
+        {
+            var parentPid = int.Parse(args[1]);
+
+            try
+            {
+                Process.GetProcessById(parentPid);
+            }
+            catch(ArgumentException)
+            { }
+            
+
+            foreach(var file in args.Skip(2))
+                File.Delete(file);
+        }
+
     }
 }
