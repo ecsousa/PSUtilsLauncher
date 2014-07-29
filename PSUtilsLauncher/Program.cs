@@ -22,6 +22,7 @@ namespace PSUtilsLauncher
         private string ConEmuPath;
         private string PowerShellPath;
         private List<string> FilesToClean;
+        private string BinariesPath;
 
         static void Main(string[] args)
         {
@@ -93,6 +94,9 @@ namespace PSUtilsLauncher
             this.ConEmuExecutable = Path.Combine(this.ConEmuPath, (Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
             this.FilesToClean = new List<string>();
+            this.BinariesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtilsLauncher\\Binaries");
+
+            Environment.SetEnvironmentVariable("PATH", string.Format("{0};{1}", this.BinariesPath, Environment.GetEnvironmentVariable("PATH")));
 
             try
             {
@@ -202,12 +206,17 @@ namespace PSUtilsLauncher
 
         private void WriteBinary(string resource, string fileName)
         {
+            if(!Directory.Exists(this.BinariesPath))
+                Directory.CreateDirectory(this.BinariesPath);
+
+            var output = Path.Combine(this.BinariesPath, fileName);
+
             using(var stream = typeof(Program).Assembly.GetManifestResourceStream(resource))
             using(var gzip = new GZipStream(stream, CompressionMode.Decompress))
-            using(var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+            using(var fileStream = new FileStream(output, FileMode.Create, FileAccess.Write))
                 gzip.CopyTo(fileStream);
 
-            this.FilesToClean.Add(fileName);
+            this.FilesToClean.Add(output);
         }
 
         private bool UpdateRepository()
@@ -270,8 +279,11 @@ namespace PSUtilsLauncher
             var programName = new Uri(typeof(Program).Assembly.CodeBase).Segments.Last();
             this.ExecuteProcess(
                 Process.GetCurrentProcess().MainModule.FileName,
-                string.Format("clean {0} {1}", Process.GetCurrentProcess().Id, string.Join(" ", this.FilesToClean))
-                );
+                string.Format("clean {0} {1}",
+                    Process.GetCurrentProcess().Id,
+                    string.Join(" ", this.FilesToClean.Select(file => string.Format("\"{0}\"", file)))
+                )
+            );
         }
         private static void Clean(string[] args)
         {
