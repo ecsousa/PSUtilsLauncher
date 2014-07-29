@@ -233,7 +233,7 @@ namespace PSUtilsLauncher
                             FetchOptions = null,
                             MergeOptions = new MergeOptions
                             {
-                                FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
+                                FileConflictStrategy = CheckoutFileConflictStrategy.Normal
                             },
                         });
 
