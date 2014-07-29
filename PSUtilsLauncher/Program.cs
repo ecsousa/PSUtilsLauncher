@@ -236,7 +236,7 @@ namespace PSUtilsLauncher
         {
             var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
 
-            this.ExecuteProcess(this.ConEmuExecutable, arguments);
+            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         }
 
         private void StartWithPowerShell()
@@ -244,16 +244,23 @@ namespace PSUtilsLauncher
 
             var arguments = string.Format("-ExecutionPolicy {0} -NoExit -Command \"Import-Module '{1}'\"", this.Settings.ExecutionPolicy, this.PSUtilsPath);
 
-            this.ExecuteProcess(this.PowerShellPath, arguments);
+            this.ExecuteProcess(this.PowerShellPath, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
         }
 
         private Process ExecuteProcess(string program, string arguments)
         {
+            return this.ExecuteProcess(program, arguments, null);
+        }
+        private Process ExecuteProcess(string program, string arguments, string workingFolder)
+        {
             var psi = new ProcessStartInfo();
             psi.FileName = program;
             psi.Arguments = arguments;
             psi.UseShellExecute = false;
+
+            if(!string.IsNullOrWhiteSpace(workingFolder))
+                psi.WorkingDirectory = workingFolder;
 
             return Process.Start(psi);
         }
