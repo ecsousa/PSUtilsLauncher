@@ -88,27 +88,20 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PreBuildEvent>
-      if not exist "$(TargetDir)NativeBinaries" md "$(TargetDir)NativeBinaries"
-      if not exist "$(TargetDir)NativeBinaries\x86" md "$(TargetDir)NativeBinaries\x86"
-      xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\x86\*.*" "$(TargetDir)NativeBinaries\x86"
-      if not exist "$(TargetDir)NativeBinaries\amd64" md "$(TargetDir)NativeBinaries\amd64"
-      xcopy /s /y /d "$(SolutionDir)packages\LibGit2Sharp.0.18.1.0\lib\net40\NativeBinaries\amd64\*.*" "$(TargetDir)NativeBinaries\amd64"
-    </PreBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <Target Name="AfterResolveReferences">
     <ItemGroup>
       <GZip Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'" />
-      <GZip Include="$(TargetDir)NativeBinaries\x86\*.dll" />
+      <GZip Include="%(ReferenceCopyLocalPaths.rootdir)%(ReferenceCopyLocalPaths.directory)NativeBinaries\x86\*.dll" Condition="'%(ReferenceCopyLocalPaths.filename)%(ReferenceCopyLocalPaths.extension)' == 'LibGit2Sharp.dll'" />
     </ItemGroup>
-
     <Exec Command="$(ProjectDir)gzip.exe -fk %(GZip.Identity)" />
-    
     <ItemGroup>
       <EmbeddedResource Include="%(ReferenceCopyLocalPaths.Identity).gz" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
         <LogicalName>%(ReferenceCopyLocalPaths.DestinationSubDirectory)%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
       </EmbeddedResource>
-      <NativeBinaries Include="$(TargetDir)NativeBinaries\x86\*.dll" />
+      <NativeBinaries Include="%(ReferenceCopyLocalPaths.rootdir)%(ReferenceCopyLocalPaths.directory)NativeBinaries\x86\*.dll" Condition="'%(ReferenceCopyLocalPaths.filename)%(ReferenceCopyLocalPaths.extension)' == 'LibGit2Sharp.dll'" />
       <EmbeddedResource Include="%(NativeBinaries.Identity).gz">
         <LogicalName>gitlib:%(NativeBinaries.Filename)%(NativeBinaries.Extension)</LogicalName>
       </EmbeddedResource>
