@@ -23,6 +23,8 @@ namespace PSUtilsLauncher
         private string PowerShellPath;
         private List<string> FilesToClean;
         private string BinariesPath;
+        private string MessagesFile;
+        private List<string> Messages;
 
         static void Main(string[] args)
         {
@@ -83,7 +85,9 @@ namespace PSUtilsLauncher
             this.ConEmuExecutable = Path.Combine(this.ConEmuPath, (Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
             this.FilesToClean = new List<string>();
+            this.Messages = new List<string>();
             this.BinariesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtilsLauncher\\Binaries");
+            this.MessagesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils\\messages.txt");
 
             Environment.SetEnvironmentVariable("PATH", string.Format("{0};{1}", this.BinariesPath, Environment.GetEnvironmentVariable("PATH")));
 
@@ -168,6 +172,11 @@ namespace PSUtilsLauncher
             try
             {
                 Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath);
+
+                this.Messages.Add(string.Format("PSUtils repository has just been cloned to {0}. There is some other nice tools you can install.", this.PSUtilsPath));
+                this.Messages.Add(string.Format(" - Install-Vim function will install Vim and gVim (portable) at {0}Vim", this.MyDirectory));
+                this.Messages.Add(string.Format(" - Install-Sysinternals function will install Sysinternals tools at {0}sysinternals. PSUtils", this.MyDirectory));
+                this.Messages.Add(string.Format(" will create aliases for these tools at startup if whey are present.", this.MyDirectory));
             }
             catch
             {
@@ -214,6 +223,8 @@ namespace PSUtilsLauncher
             {
                 using(var repo = new Repository(this.PSUtilsPath))
                 {
+                    var currentCommit = repo.Commits.First();
+
                     repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
                         new PullOptions
                         {
@@ -221,9 +232,22 @@ namespace PSUtilsLauncher
                             MergeOptions = new MergeOptions
                             {
                                 FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
-                            }
+                            },
+
                         });
 
+                    bool initialMessage = false;
+
+                    foreach(var commit in repo.Commits.TakeWhile(c => c.Id != currentCommit.Id))
+                    {
+                        if(!initialMessage)
+                        {
+                            this.Messages.Add("PSUtils module has been updated:");
+                            initialMessage = true;
+                        }
+
+                        this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), commit.Message));
+                    }
                 }
             }
 
@@ -234,16 +258,25 @@ namespace PSUtilsLauncher
         {
             var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
 
+            this.WriteMessages();
             this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
         }
 
         private void StartWithPowerShell()
         {
-
             var arguments = string.Format("-ExecutionPolicy {0} -NoExit -Command \"Import-Module '{1}'\"", this.Settings.ExecutionPolicy, this.PSUtilsPath);
 
+            this.WriteMessages();
             this.ExecuteProcess(this.PowerShellPath, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
 
+        }
+
+        private void WriteMessages()
+        {
+            if(this.Messages.Count > 0)
+            {
+                File.AppendAllLines(this.MessagesFile, this.Messages);
+            }
         }
 
         private Process ExecuteProcess(string program, string arguments)
