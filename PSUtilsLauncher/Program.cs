@@ -225,7 +225,9 @@ namespace PSUtilsLauncher
                 {
                     var currentCommit = repo.Commits.First();
 
-                    repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
+                    try
+                    {
+                        repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
                         new PullOptions
                         {
                             FetchOptions = null,
@@ -233,20 +235,26 @@ namespace PSUtilsLauncher
                             {
                                 FileConflictStrategy = CheckoutFileConflictStrategy.Theirs,
                             },
-
                         });
 
-                    bool initialMessage = false;
+                        bool initialMessage = false;
 
-                    foreach(var commit in repo.Commits.TakeWhile(c => c.Id != currentCommit.Id))
-                    {
-                        if(!initialMessage)
+                        foreach(var commit in repo.Commits.TakeWhile(c => c.Id != currentCommit.Id))
                         {
-                            this.Messages.Add("PSUtils module has been updated:");
-                            initialMessage = true;
-                        }
+                            if(!initialMessage)
+                            {
+                                this.Messages.Add("PSUtils module has been updated:");
+                                initialMessage = true;
+                            }
 
-                        this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), commit.Message));
+                            this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), commit.Message));
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        this.Messages.Add(string.Format("Error updateing PSUtils repository: {0}", ex.Message));
+                        this.Messages.Add(string.Format("Exception Type: {0}", ex.GetType().FullName));
+                        this.Messages.Add(string.Format("StackTrace: {0}", ex.StackTrace));
                     }
                 }
             }
