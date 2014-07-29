@@ -26,28 +26,17 @@ namespace PSUtilsLauncher
 
         static void Main(string[] args)
         {
-            if(args.Length > 0 && args[0] == "clean")
-            {
-                try
-                {
-                    Clean(args);
-                }
-                catch(Exception ex)
-                {
-                    var exp = ex;
-                    while(exp != null)
-                    {
-                        MessageBox.Show(string.Format("{0}\n{1}", exp.Message, exp.StackTrace), exp.GetType().FullName);
-                        exp = exp.InnerException;
-                    }
-                }
-                return;
-            }
-
-            AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
-
             try
             {
+
+                if(args.Length > 0 && args[0] == "clean")
+                {
+                    Clean(args);
+                    return;
+                }
+
+                AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
+
                 new Program().Run();
             }
             catch(Exception ex)
