@@ -11,6 +11,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.IO.Compression;
 using System.Threading;
+using System.Text.RegularExpressions;
 
 namespace PSUtilsLauncher
 {
@@ -293,7 +294,9 @@ namespace PSUtilsLauncher
                                 initialMessage = true;
                             }
 
-                            this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), commit.Message));
+                            var endlineRegex = new Regex("[\r\n]+$");
+
+                            this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), endlineRegex.Replace(commit.Message, string.Empty)));
                         }
                     }
                     catch(Exception ex)
