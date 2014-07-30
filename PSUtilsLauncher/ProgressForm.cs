@@ -13,8 +13,14 @@ namespace PSUtilsLauncher
 {
     public partial class ProgressForm: Form
     {
+        delegate void CloseWindowDelegate();
+        delegate void SetProgressDelegate(string title, int progress);
+
         private string Title;
         private Task Task;
+        private CloseWindowDelegate CloseWindow;
+        private SetProgressDelegate SetProgress;
+
         protected ProgressForm()
         {
             InitializeComponent();
@@ -37,17 +43,25 @@ namespace PSUtilsLauncher
             this()
         {
             this.Title = title;
-
             this.Signal = new ManualResetEvent(false);
+            this.CloseWindow = new CloseWindowDelegate(this.Close);
+            this.SetProgress = new SetProgressDelegate(this.SetProgressImpl);
+
             this.Task = new Task(() =>
             {
-                task(SetProgress);
+                task(InvokeSetProgress);
 
                 this.Signal.Set();
             });
         }
 
-        private void SetProgress(string action, int progress)
+        private void InvokeSetProgress(string action, int progress)
+        {
+            this.Invoke(this.SetProgress, action, progress);
+
+        }
+
+        private void SetProgressImpl(string action, int progress)
         {
             this.lblAction.Text = action;
             this.prgProgess.Value = progress;
@@ -66,11 +80,12 @@ namespace PSUtilsLauncher
                 this.WaiterTask = new Task(() =>
                 {
                     this.Signal.WaitOne();
-                    this.Close();
+                    this.Invoke(this.CloseWindow);
                 });
 
                 this.WaiterTask.Start();
             }
         }
+
     }
 }

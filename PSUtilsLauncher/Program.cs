@@ -10,6 +10,7 @@ using System.Reflection;
 using System.Text;
 using System.Windows.Forms;
 using System.IO.Compression;
+using System.Threading;
 
 namespace PSUtilsLauncher
 {
@@ -121,6 +122,29 @@ namespace PSUtilsLauncher
         {
             var tempFile = Path.GetTempFileName();
 
+            using(var client = new WebClient())
+            {
+                var progess = new ProgressForm("Downloading ConEmu", setProgress =>
+                {
+                    var completed = new ManualResetEvent(false);
+
+                    client.DownloadProgressChanged += (sender, e) =>
+                    {
+                        setProgress("Downloading...", e.ProgressPercentage);
+                    };
+
+                    client.DownloadFileCompleted += (sender, e) =>
+                    {
+                        completed.Set();
+                    };
+
+                    client.DownloadFileAsync(new Uri(this.Settings.ConEmuDownloadUrl), tempFile);
+
+                    completed.WaitOne();
+
+                }).ShowDialog();
+            }
+
             var sevenZipPath = Path.Combine(this.PSUtilsPath, @"7z\7z.exe");
 
             if(!Directory.Exists(this.ConEmuPath))
@@ -128,13 +152,11 @@ namespace PSUtilsLauncher
 
             try
             {
-                this.ExecuteProcess(this.PowerShellPath,
-                    string.Format("-Command Invoke-WebRequest '{0}' -OutFile '{1}'; pushd '{2}'; & '{3}' x '{1}'",
-                        this.Settings.ConEmuDownloadUrl,
-                        tempFile,
-                        this.ConEmuPath,
-                        sevenZipPath
-                    ))
+                this.ExecuteProcess(sevenZipPath,
+                    string.Format("x \"{0}\"",
+                        tempFile
+                    ),
+                    this.ConEmuPath)
                     .WaitForExit();
 
             }
