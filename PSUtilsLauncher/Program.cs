@@ -27,6 +27,7 @@ namespace PSUtilsLauncher
         private string BinariesPath;
         private string MessagesFile;
         private List<string> Messages;
+        private bool NetworkExecution;
 
         static void Main(string[] args)
         {
@@ -81,6 +82,7 @@ namespace PSUtilsLauncher
         private void Run()
         {
             this.MyDirectory = AppDomain.CurrentDomain.BaseDirectory;
+            this.NetworkExecution = new Uri(this.MyDirectory).IsUnc;
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
@@ -253,7 +255,7 @@ namespace PSUtilsLauncher
 
         private bool UpdateRepository()
         {
-            if(this.Settings.AutoUpdateModule)
+            if(!this.NetworkExecution && this.Settings.AutoUpdateModule)
             {
                 using(var repo = new Repository(this.PSUtilsPath))
                 {
