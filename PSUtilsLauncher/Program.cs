@@ -149,12 +149,7 @@ namespace PSUtilsLauncher
         {
             this.WriteGitBinary();
 
-            if(!Directory.Exists(this.PSUtilsPath))
-            {
-                if(MessageBox.Show("PSUtils repository not found. Do you want to download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
-                    return false;
-            }
-            else
+            if(Directory.Exists(this.PSUtilsPath))
             {
                 if(!Repository.IsValid(this.PSUtilsPath))
                 {
@@ -171,7 +166,23 @@ namespace PSUtilsLauncher
 
             try
             {
-                Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath);
+                new ProgressForm("Cloning PSUtils repository", setProgress =>
+                {
+                    Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath, new CloneOptions
+                    {
+                        OnTransferProgress = progress =>
+                        {
+                            setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                            return true;
+                        },
+                        OnCheckoutProgress = (path, completedSteps, totalSteps) =>
+                        {
+                            setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                        }
+                    });
+
+                }).ShowDialog();
+
 
                 this.Messages.Add(string.Format("PSUtils repository has just been cloned to {0}. There is some other nice tools you can install.", this.PSUtilsPath));
                 this.Messages.Add(string.Format(" - Install-Vim function will install Vim and gVim (portable) at {0}Vim", this.MyDirectory));
@@ -227,15 +238,28 @@ namespace PSUtilsLauncher
 
                     try
                     {
-                        repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
-                        new PullOptions
+                        new ProgressForm("Pulling PSUtils repository", setProgress =>
                         {
-                            FetchOptions = null,
-                            MergeOptions = new MergeOptions
+                            repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
+                            new PullOptions
                             {
-                                FileConflictStrategy = CheckoutFileConflictStrategy.Normal
-                            },
-                        });
+                                FetchOptions = new FetchOptions {
+                                    OnTransferProgress = progress =>
+                                    {
+                                        setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                                        return true;
+                                    },
+                                },
+                                MergeOptions = new MergeOptions
+                                {
+                                    FileConflictStrategy = CheckoutFileConflictStrategy.Normal,
+                                    OnCheckoutProgress = (path, completedSteps, totalSteps) =>
+                                    {
+                                        setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                                    }
+                                },
+                            });
+                        }).ShowDialog();
 
                         bool initialMessage = false;
 
