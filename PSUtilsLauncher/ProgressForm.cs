@@ -20,15 +20,16 @@ namespace PSUtilsLauncher
         private Task Task;
         private CloseWindowDelegate CloseWindow;
         private SetProgressDelegate SetProgress;
-
+        private const int CP_NOCLOSE_BUTTON = 0x200;
+        private ManualResetEvent CloseSignal;
+        private System.Threading.Tasks.Task WaiterTask;
+        private int WaitMilliseconds;
+ 
         protected ProgressForm()
         {
             InitializeComponent();
         }
 
-        private const int CP_NOCLOSE_BUTTON = 0x200;
-        private ManualResetEvent Signal;
-        private System.Threading.Tasks.Task WaiterTask;
         protected override CreateParams CreateParams
         {
             get
@@ -40,18 +41,23 @@ namespace PSUtilsLauncher
         }
 
         public ProgressForm(string title, Action<Action<string, int>> task) :
+            this(title, task, 0)
+        { }
+
+        public ProgressForm(string title, Action<Action<string, int>> task, int waitMilliseconds) :
             this()
         {
             this.Title = title;
-            this.Signal = new ManualResetEvent(false);
+            this.CloseSignal = new ManualResetEvent(false);
             this.CloseWindow = new CloseWindowDelegate(this.Close);
             this.SetProgress = new SetProgressDelegate(this.SetProgressImpl);
+            this.WaitMilliseconds = waitMilliseconds;
 
             this.Task = new Task(() =>
             {
                 task(InvokeSetProgress);
 
-                this.Signal.Set();
+                this.CloseSignal.Set();
             });
         }
 
@@ -73,13 +79,13 @@ namespace PSUtilsLauncher
             this.lblAction.Text = this.Title;
             this.Task.Start();
 
-            if(this.Task.Wait(1500))
+            if(this.WaitMilliseconds > 0 && this.Task.Wait(this.WaitMilliseconds))
                 this.Close();
             else
             {
                 this.WaiterTask = new Task(() =>
                 {
-                    this.Signal.WaitOne();
+                    this.CloseSignal.WaitOne();
                     this.Invoke(this.CloseWindow);
                 });
 

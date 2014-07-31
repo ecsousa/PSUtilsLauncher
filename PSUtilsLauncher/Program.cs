@@ -284,7 +284,7 @@ namespace PSUtilsLauncher
                                     }
                                 },
                             });
-                        }).ShowDialog();
+                        }, 2500).ShowDialog();
 
                         bool initialMessage = false;
 
