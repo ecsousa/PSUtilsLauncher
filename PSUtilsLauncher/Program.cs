@@ -28,6 +28,7 @@ namespace PSUtilsLauncher
         private string MessagesFile;
         private List<string> Messages;
         private bool NetworkExecution;
+        private string AppData;
 
         static void Main(string[] args)
         {
@@ -91,7 +92,8 @@ namespace PSUtilsLauncher
             this.FilesToClean = new List<string>();
             this.Messages = new List<string>();
             this.BinariesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtilsLauncher\\Binaries");
-            this.MessagesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils\\messages.txt");
+            this.AppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils");
+            this.MessagesFile = Path.Combine(this.AppData, "PSUtils\\messages.txt");
 
             Environment.SetEnvironmentVariable("PATH", string.Format("{0};{1}", this.BinariesPath, Environment.GetEnvironmentVariable("PATH")));
 
@@ -332,10 +334,18 @@ namespace PSUtilsLauncher
 
         private void WriteMessages()
         {
+            this.AssureAppData();
+
             if(this.Messages.Count > 0)
             {
                 File.AppendAllLines(this.MessagesFile, this.Messages);
             }
+        }
+
+        private void AssureAppData()
+        {
+            if(!Directory.Exists(this.AppData))
+                Directory.CreateDirectory(this.AppData);
         }
 
         private Process ExecuteProcess(string program, string arguments)
