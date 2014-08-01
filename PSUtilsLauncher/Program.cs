@@ -233,23 +233,11 @@ namespace PSUtilsLauncher
 
             var output = Path.Combine(this.BinariesPath, fileName);
 
-            FileStream fileStream;
-
-            try
-            {
-                fileStream = new FileStream(output, FileMode.Create, FileAccess.Write);
-            }
-            catch(IOException)
-            {
-                //File is probably locked due to another PSUtils instance.
-                //This will be ignore. Function will return without trying to save file.
-                return;
-            }
-
-            using(fileStream) 
             using(var stream = typeof(Program).Assembly.GetManifestResourceStream(resource))
             using(var gzip = new GZipStream(stream, CompressionMode.Decompress))
+            using(var fileStream = new FileStream(output, FileMode.Create, FileAccess.Write))
                 gzip.CopyTo(fileStream);
+
         }
 
         private bool UpdateRepository()
