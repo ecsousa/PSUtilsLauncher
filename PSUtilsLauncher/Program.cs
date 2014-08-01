@@ -161,7 +161,8 @@ namespace PSUtilsLauncher
                     string.Format("x \"{0}\"",
                         tempFile
                     ),
-                    this.ConEmuPath)
+                    this.ConEmuPath,
+                    false)
                     .WaitForExit();
 
             }
@@ -320,7 +321,7 @@ namespace PSUtilsLauncher
             var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
 
             this.WriteMessages();
-            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), true);
         }
 
         private void StartWithPowerShell()
@@ -328,7 +329,7 @@ namespace PSUtilsLauncher
             var arguments = string.Format("-ExecutionPolicy {0} -NoExit -Command \"Import-Module '{1}'\"", this.Settings.ExecutionPolicy, this.PSUtilsPath);
 
             this.WriteMessages();
-            this.ExecuteProcess(this.PowerShellPath, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            this.ExecuteProcess(this.PowerShellPath, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), true);
 
         }
 
@@ -350,14 +351,16 @@ namespace PSUtilsLauncher
 
         private Process ExecuteProcess(string program, string arguments)
         {
-            return this.ExecuteProcess(program, arguments, null);
+            return this.ExecuteProcess(program, arguments, null, false);
         }
-        private Process ExecuteProcess(string program, string arguments, string workingFolder)
+        private Process ExecuteProcess(string program, string arguments, string workingFolder, bool bringToFront)
         {
             var psi = new ProcessStartInfo();
             psi.FileName = program;
             psi.Arguments = arguments;
             psi.UseShellExecute = false;
+            if(bringToFront)
+                psi.WindowStyle = ProcessWindowStyle.Maximized;
 
             if(!string.IsNullOrWhiteSpace(workingFolder))
                 psi.WorkingDirectory = workingFolder;
