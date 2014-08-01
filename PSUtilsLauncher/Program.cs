@@ -93,7 +93,7 @@ namespace PSUtilsLauncher
             this.Messages = new List<string>();
             this.BinariesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtilsLauncher\\Binaries");
             this.AppData = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils");
-            this.MessagesFile = Path.Combine(this.AppData, "PSUtils\\messages.txt");
+            this.MessagesFile = Path.Combine(this.AppData, "messages.txt");
 
             Environment.SetEnvironmentVariable("PATH", string.Format("{0};{1}", this.BinariesPath, Environment.GetEnvironmentVariable("PATH")));
 
