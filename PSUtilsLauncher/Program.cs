@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using System.IO.Compression;
 using System.Threading;
 using System.Text.RegularExpressions;
+using System.Transactions;
 
 namespace PSUtilsLauncher
 {
@@ -23,23 +24,17 @@ namespace PSUtilsLauncher
         private string ConEmuExecutable;
         private string ConEmuPath;
         private string PowerShellPath;
-        private List<string> FilesToClean;
         private string BinariesPath;
         private string MessagesFile;
         private List<string> Messages;
         private bool NetworkExecution;
+        private string ConEmuXml;
+        private string ConEmuXmlAppPath;
 
         static void Main(string[] args)
         {
             try
             {
-
-                if(args.Length > 0 && args[0] == "clean")
-                {
-                    Clean(args);
-                    return;
-                }
-
                 AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
 
                 new Program().Run();
@@ -86,38 +81,31 @@ namespace PSUtilsLauncher
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
+            this.ConEmuXml = Path.Combine(this.PSUtilsPath, "ConEmu.xml");
             this.ConEmuExecutable = Path.Combine(this.ConEmuPath, (Environment.GetEnvironmentVariable("PROCESSOR_ARCHITEW6432") ?? "x86").ToLower() == "amd64" ? "ConEmu64.exe" : "ConEmu.exe");
             this.PowerShellPath = Path.Combine(Environment.GetEnvironmentVariable("WINDIR"), @"system32\WindowsPowerShell\v1.0\PowerShell.exe");
-            this.FilesToClean = new List<string>();
             this.Messages = new List<string>();
             this.BinariesPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtilsLauncher\\Binaries");
             this.MessagesFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils\\messages.txt");
+            this.ConEmuXmlAppPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils\\ConEmu.xml");
 
             Environment.SetEnvironmentVariable("PATH", string.Format("{0};{1}", this.BinariesPath, Environment.GetEnvironmentVariable("PATH")));
 
-            try
+            if(!this.EnsureRepository())
+                return;
+
+            if(!File.Exists(this.ConEmuExecutable))
             {
-                if(!this.EnsureRepository())
-                    return;
-
-                if(!File.Exists(this.ConEmuExecutable))
+                if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
                 {
-                    if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
-                    {
-                        this.StartWithPowerShell();
-                        return;
-                    }
-
-                    this.DownloadConemu();
+                    this.StartWithPowerShell();
+                    return;
                 }
 
-                this.StartWithConEmu();
+                this.DownloadConemu();
             }
-            finally
-            {
-                if(this.FilesToClean.Count > 0)
-                    this.LaunchCleaner();
-            }
+
+            this.StartWithConEmu();
 
         }
 
@@ -250,7 +238,6 @@ namespace PSUtilsLauncher
             using(var fileStream = new FileStream(output, FileMode.Create, FileAccess.Write))
                 gzip.CopyTo(fileStream);
 
-            this.FilesToClean.Add(output);
         }
 
         private bool UpdateRepository()
@@ -315,10 +302,68 @@ namespace PSUtilsLauncher
 
         private void StartWithConEmu()
         {
-            var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
+            var arguments = string.Format("/LoadCfgFile \"{0}\"", this.ConEmuXml);
+
+            File.Copy(this.ConEmuXml, this.ConEmuXmlAppPath, true);
 
             this.WriteMessages();
-            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))
+                .WaitForExit();
+
+            this.CheckConEmuXml();
+        }
+
+        private void CheckConEmuXml()
+        {
+            if(!Repository.IsValid(this.PSUtilsPath))
+                return;
+
+            using(var repo = new Repository(this.PSUtilsPath))
+            {
+
+                var diff = repo.Diff.Compare<Patch>(new [] { this.ConEmuXml })
+                    .ToArray();
+
+                if(diff.Length > 1)
+                    return;
+
+                var firstDiff = diff.First();
+
+                if(firstDiff.IsBinaryComparison
+                    || firstDiff.LinesAdded != 1
+                    || firstDiff.LinesDeleted != 1)
+                    return;
+
+                var diffStrings = firstDiff.Patch.Split('\n');
+
+                if(diffStrings[4] != "@@ -1,7 +1,7 @@")
+                    return;
+
+                var endlineRegex = new Regex("[\r\n]+$");
+
+                var lineToRemove = diffStrings.Skip(5)
+                    .Where(line => line.StartsWith("+"))
+                    .Select(line => endlineRegex.Replace(line.Substring(1), string.Empty))
+                    .First();
+
+                var lineToAdd = diffStrings.Skip(5)
+                    .Where(line => line.StartsWith("-"))
+                    .Select(line => endlineRegex.Replace(line.Substring(1), string.Empty))
+                    .First();
+
+                var allLines = File.ReadAllLines(this.ConEmuXml)
+                    .Select(line =>
+                    {
+                        if(lineToRemove == null || line != lineToRemove)
+                            return line;
+
+                        lineToRemove = null;
+                        return lineToAdd;
+                    });
+
+                File.WriteAllLines(this.ConEmuXml, allLines);
+
+            }
         }
 
         private void StartWithPowerShell()
@@ -353,41 +398,6 @@ namespace PSUtilsLauncher
                 psi.WorkingDirectory = workingFolder;
 
             return Process.Start(psi);
-        }
-
-        private void LaunchCleaner()
-        {
-            var programName = new Uri(typeof(Program).Assembly.CodeBase).Segments.Last();
-            this.ExecuteProcess(
-                Process.GetCurrentProcess().MainModule.FileName,
-                string.Format("clean {0} {1}",
-                    Process.GetCurrentProcess().Id,
-                    string.Join(" ", this.FilesToClean.Select(file => string.Format("\"{0}\"", file)))
-                )
-            );
-        }
-        private static void Clean(string[] args)
-        {
-            var parentPid = int.Parse(args[1]);
-
-            try
-            {
-                Process.GetProcessById(parentPid).WaitForExit();
-            }
-            catch(ArgumentException)
-            { }
-
-            foreach(var file in args.Skip(2))
-            {
-                try
-                {
-                    File.Delete(file);
-                }
-                catch(Exception ex)
-                {
-                    MessageBox.Show(string.Format("Could not delete file '{0}': {1}", file, ex.Message), "PSUtils Launcher");
-                }
-            }
         }
 
     }
