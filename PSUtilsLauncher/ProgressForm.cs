@@ -24,6 +24,7 @@ namespace PSUtilsLauncher
         private ManualResetEvent CloseSignal;
         private System.Threading.Tasks.Task WaiterTask;
         private int WaitMilliseconds;
+        private Exception TaskException = null;
  
         protected ProgressForm()
         {
@@ -55,9 +56,19 @@ namespace PSUtilsLauncher
 
             this.Task = new Task(() =>
             {
-                task(InvokeSetProgress);
+                try
+                {
+                    task(InvokeSetProgress);
 
-                this.CloseSignal.Set();
+                }
+                catch(Exception ex)
+                {
+                    this.TaskException = ex;
+                }
+                finally
+                {
+                    this.CloseSignal.Set();
+                }
             });
         }
 
@@ -91,6 +102,16 @@ namespace PSUtilsLauncher
 
                 this.WaiterTask.Start();
             }
+        }
+
+        public new DialogResult ShowDialog()
+        {
+            var @return = base.ShowDialog();
+
+            if(this.TaskException != null)
+                throw new TaskExecutionException(this.TaskException);
+
+            return @return;
         }
 
     }

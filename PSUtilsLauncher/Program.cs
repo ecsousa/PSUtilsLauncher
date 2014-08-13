@@ -47,9 +47,30 @@ namespace PSUtilsLauncher
             }
             catch(Exception ex)
             {
-                MessageBox.Show(string.Format("Error: {0}", ex.Message), "PSUtils Launcher");
+                if(MessageBox.Show(string.Format("Error: {0}. Do you want to see more information?", ex.Message.Trim()), "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                    ShowExceptionDetails(ex);
             }
 
+        }
+
+        private static void ShowExceptionDetails(Exception ex)
+        {
+            var details = new StringBuilder();
+
+            FormatDetails(details, ex);
+
+            MessageBox.Show(details.ToString(), "PSUtils Launcher");
+        }
+
+        private static void FormatDetails(StringBuilder details, Exception ex)
+        {
+            details.AppendFormat("Exception Type: {0}" + Environment.NewLine, ex.GetType().FullName);
+            details.AppendFormat("Message: {0}" + Environment.NewLine, ex.Message.Trim());
+            details.AppendFormat("Stack Trace: " + Environment.NewLine + "{0}" + Environment.NewLine, ex.StackTrace);
+            details.AppendLine();
+
+            if(ex.InnerException != null)
+                FormatDetails(details, ex.InnerException);
         }
 
         private static Assembly OnResolveAssembly(object sender, ResolveEventArgs args)
