@@ -43,8 +43,7 @@ namespace PSUtilsLauncher.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("http://download-codeplex.sec.s-msft.com/Download/Release?ProjectName=conemu&Downl" +
-            "oadId=882078&FileTime=130506244246500000&Build=20919")]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://ecsousa.github.io/ConEmuPack.7z")]
         public string ConEmuDownloadUrl {
             get {
                 return ((string)(this["ConEmuDownloadUrl"]));
