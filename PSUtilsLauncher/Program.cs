@@ -47,10 +47,15 @@ namespace PSUtilsLauncher
             }
             catch(Exception ex)
             {
-                if(MessageBox.Show(string.Format("Error: {0}. Do you want to see more information?", ex.Message.Trim()), "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.Yes)
-                    ShowExceptionDetails(ex);
+                ShowErrorMessage(ex);
             }
 
+        }
+
+        private static void ShowErrorMessage(Exception ex)
+        {
+            if(MessageBox.Show(string.Format("Error: {0}. Do you want to see more information?", ex.Message.Trim()), "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                ShowExceptionDetails(ex);
         }
 
         private static void ShowExceptionDetails(Exception ex)
@@ -153,6 +158,7 @@ namespace PSUtilsLauncher
                 var progess = new ProgressForm("Downloading ConEmu", setProgress =>
                 {
                     var completed = new ManualResetEvent(false);
+                    Exception downloadError = null;
 
                     client.DownloadProgressChanged += (sender, e) =>
                     {
@@ -161,12 +167,16 @@ namespace PSUtilsLauncher
 
                     client.DownloadFileCompleted += (sender, e) =>
                     {
+                        downloadError = e.Error;
                         completed.Set();
                     };
 
                     client.DownloadFileAsync(new Uri(this.Settings.ConEmuDownloadUrl), tempFile);
 
                     completed.WaitOne();
+
+                    if(downloadError != null)
+                        throw new Exception(downloadError.Message, downloadError);
 
                 }).ShowDialog();
             }
