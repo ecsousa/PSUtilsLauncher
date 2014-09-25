@@ -125,8 +125,16 @@ namespace PSUtilsLauncher
 
             try
             {
-                if(!this.EnsureRepository())
+                this.WriteGitBinary();
+
+                try
+                {
+                    this.EnsureRepository();
+                }
+                catch(CloneAbortException)
+                {
                     return;
+                }
 
                 if(!File.Exists(this.ConEmuExecutable))
                 {
@@ -206,16 +214,50 @@ namespace PSUtilsLauncher
 
         private bool EnsureRepository()
         {
-            this.WriteGitBinary();
+            return this.EnsureRepository("PSUtils", this.PSUtilsPath, this.Settings.PSUtilsRepository, true);
+        }
 
-            if(Directory.Exists(this.PSUtilsPath))
+        private bool EnsureRepository(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage)
+        {
+            var hasBeenUpdated = EnsureRepositoryFlat(repositoryName, workingDir, repositoryUrl, welcomeMessage);
+
+            this.EnsureSubmodules(workingDir, !hasBeenUpdated);
+
+            return hasBeenUpdated;
+
+        }
+
+        private void EnsureSubmodules(string workingDir, bool onlyIfEmpty)
+        {
+            using(var repository = new Repository(workingDir))
             {
-                if(!Repository.IsValid(this.PSUtilsPath))
+                foreach(var submodule in repository.Submodules)
                 {
-                    if(MessageBox.Show("PSUtils repository not valid. Do you want to DELETE current directory and re-download it? (it may take a while)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
-                        return false;
+                    var name = Path.GetFileName(submodule.Name);
+                    var path = Path.Combine(workingDir, submodule.Path);
+                    var url = submodule.Url;
 
-                    Directory.Delete(this.PSUtilsPath, true);
+                    if(onlyIfEmpty && new DirectoryInfo(path).EnumerateFiles().Any())
+                        continue;
+
+                    this.EnsureRepository(name, path, url, false);
+                }
+            }
+
+        }
+
+        private bool EnsureRepositoryFlat(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage)
+        {
+
+            if(Directory.Exists(workingDir))
+            {
+                if(!Repository.IsValid(workingDir))
+                {
+                    if(new DirectoryInfo(workingDir).EnumerateFiles().Any()
+                        && MessageBox.Show(string.Format("{0} repository not valid. Do you want to DELETE current directory and re-download it? (it may take a while)", repositoryName), "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
+                        throw new CloneAbortException();
+
+                    Directory.Delete(workingDir, true);
                 }
                 else
                 {
@@ -225,9 +267,9 @@ namespace PSUtilsLauncher
 
             try
             {
-                new ProgressForm("Cloning PSUtils repository", setProgress =>
+                new ProgressForm(string.Format("Cloning {0} repository", repositoryName), setProgress =>
                 {
-                    Repository.Clone(this.Settings.PSUtilsRepository, this.PSUtilsPath, new CloneOptions
+                    Repository.Clone(repositoryUrl, workingDir, new CloneOptions
                     {
                         OnTransferProgress = progress =>
                         {
@@ -243,15 +285,19 @@ namespace PSUtilsLauncher
                 }).ShowDialog();
 
 
-                this.Messages.Add(string.Format("PSUtils repository has just been cloned to {0}. There is some other nice tools you can install.", this.PSUtilsPath));
-                this.Messages.Add(string.Format(" - Install-Vim function will install Vim and gVim (portable) at {0}Vim", this.MyDirectory));
-                this.Messages.Add(string.Format(" - Install-Sysinternals function will install Sysinternals tools at {0}sysinternals. PSUtils", this.MyDirectory));
-                this.Messages.Add(string.Format(" will create aliases for these tools at startup if whey are present.", this.MyDirectory));
+                if(welcomeMessage)
+                {
+                    this.Messages.Add(string.Format("PSUtils repository has just been cloned to {0}. There is some other nice tools you can install.", workingDir));
+                    this.Messages.Add(string.Format(" - Install-Vim function will install Vim and gVim (portable) at {0}Vim", this.MyDirectory));
+                    this.Messages.Add(string.Format(" - Install-Sysinternals function will install Sysinternals tools at {0}sysinternals. PSUtils", this.MyDirectory));
+                    this.Messages.Add(string.Format(" will create aliases for these tools at startup if whey are present.", this.MyDirectory));
+                    
+                }
             }
             catch
             {
-                if(Directory.Exists(this.PSUtilsPath))
-                    Directory.Delete(this.PSUtilsPath, true);
+                if(Directory.Exists(workingDir))
+                    Directory.Delete(workingDir, true);
 
                 throw;
             }
@@ -320,20 +366,22 @@ namespace PSUtilsLauncher
                             });
                         }, 2500).ShowDialog();
 
-                        bool initialMessage = false;
+                        bool hasBeenUpdated = false;
 
                         foreach(var commit in repo.Commits.TakeWhile(c => c.Id != currentCommit.Id))
                         {
-                            if(!initialMessage)
+                            if(!hasBeenUpdated)
                             {
                                 this.Messages.Add("PSUtils module has been updated:");
-                                initialMessage = true;
+                                hasBeenUpdated = true;
                             }
 
                             var endlineRegex = new Regex("[\r\n]+$");
 
                             this.Messages.Add(string.Format(" - {0}: {1}", commit.Id.Sha.Substring(0, 7), endlineRegex.Replace(commit.Message, string.Empty)));
                         }
+
+                        return hasBeenUpdated;
                     }
                     catch(Exception ex)
                     {
@@ -344,7 +392,7 @@ namespace PSUtilsLauncher
                 }
             }
 
-            return true;
+            return false;
         }
 
         private void StartWithConEmu()
