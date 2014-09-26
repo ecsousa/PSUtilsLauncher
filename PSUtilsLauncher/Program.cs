@@ -214,12 +214,12 @@ namespace PSUtilsLauncher
 
         private bool EnsureRepository()
         {
-            return this.EnsureRepository("PSUtils", this.PSUtilsPath, this.Settings.PSUtilsRepository, true);
+            return this.EnsureRepository("PSUtils", this.PSUtilsPath, this.Settings.PSUtilsRepository, true, null);
         }
 
-        private bool EnsureRepository(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage)
+        private bool EnsureRepository(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage, ObjectId headId)
         {
-            var hasBeenUpdated = EnsureRepositoryFlat(repositoryName, workingDir, repositoryUrl, welcomeMessage);
+            var hasBeenUpdated = EnsureRepositoryFlat(repositoryName, workingDir, repositoryUrl, welcomeMessage, headId);
 
             this.EnsureSubmodules(workingDir, !hasBeenUpdated);
 
@@ -237,16 +237,23 @@ namespace PSUtilsLauncher
                     var path = Path.Combine(workingDir, submodule.Path);
                     var url = submodule.Url;
 
-                    if(onlyIfEmpty && new DirectoryInfo(path).EnumerateFiles().Any())
-                        continue;
+                    if(Repository.IsValid(path))
+                    {
+                        using(var repo = new Repository(path))
+                        {
+                            if(repo.Head.Tip.Id == submodule.HeadCommitId)
+                                continue;
+                        }
 
-                    this.EnsureRepository(name, path, url, false);
+                    }
+
+                    this.EnsureRepository(name, path, url, false, submodule.HeadCommitId);
                 }
             }
 
         }
 
-        private bool EnsureRepositoryFlat(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage)
+        private bool EnsureRepositoryFlat(string repositoryName, string workingDir, string repositoryUrl, bool welcomeMessage, ObjectId headId)
         {
 
             if(Directory.Exists(workingDir))
@@ -261,7 +268,7 @@ namespace PSUtilsLauncher
                 }
                 else
                 {
-                    return this.UpdateRepository();
+                    return this.UpdateRepository(workingDir, headId);
                 }
             }
 
@@ -278,9 +285,16 @@ namespace PSUtilsLauncher
                         },
                         OnCheckoutProgress = (path, completedSteps, totalSteps) =>
                         {
-                            setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                            if(totalSteps > 0)
+                                setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
                         }
                     });
+
+                    using(var repo = new Repository(workingDir))
+                    {
+                        this.Checkout(repo, headId, setProgress);
+                    }
+
 
                 }).ShowDialog();
 
@@ -303,6 +317,57 @@ namespace PSUtilsLauncher
             }
 
             return true;
+        }
+
+        private bool Checkout(Repository repo, ObjectId headId, Action<string, int> setProgress)
+        {
+            Commit commit;
+
+            if(headId == null)
+                this.Pull(repo, setProgress);
+            else
+            {
+                commit = repo.Lookup<Commit>(headId);
+
+                if(repo.Head.Tip == commit)
+                    return false;
+
+                repo.Checkout(commit, new CheckoutOptions
+                {
+                    OnCheckoutProgress = (path, completedSteps, totalSteps) =>
+                    {
+                        if(totalSteps > 0)
+                            setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                    }
+                });
+            }
+
+            return true;
+        }
+
+        private void Pull(Repository repo, Action<string, int> setProgress)
+        {
+            repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
+                new PullOptions
+                {
+                    FetchOptions = new FetchOptions
+                    {
+                        OnTransferProgress = progress =>
+                        {
+                            setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                            return true;
+                        },
+                    },
+                    MergeOptions = new MergeOptions
+                    {
+                        FileConflictStrategy = CheckoutFileConflictStrategy.Normal,
+                        OnCheckoutProgress = (path, completedSteps, totalSteps) =>
+                        {
+                            setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                        }
+                    }
+                });
+                    
         }
 
         private void WriteGitBinary()
@@ -333,37 +398,33 @@ namespace PSUtilsLauncher
             this.FilesToClean.Add(output);
         }
 
-        private bool UpdateRepository()
+        private bool UpdateRepository(string workingDir, ObjectId headId)
         {
             if(!this.NetworkExecution && this.Settings.AutoUpdateModule)
             {
-                using(var repo = new Repository(this.PSUtilsPath))
+                using(var repo = new Repository(workingDir))
                 {
+
+                    if(headId == repo.Head.Tip.Id)
+                        return false;
+
                     var currentCommit = repo.Commits.First();
 
                     try
                     {
                         new ProgressForm("Pulling PSUtils repository", setProgress =>
                         {
-                            repo.Network.Pull(new Signature("PSUtilsLancher", "", DateTimeOffset.Now),
-                            new PullOptions
+                            repo.Fetch("origin", new FetchOptions
                             {
-                                FetchOptions = new FetchOptions {
-                                    OnTransferProgress = progress =>
-                                    {
-                                        setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
-                                        return true;
-                                    },
-                                },
-                                MergeOptions = new MergeOptions
+                                OnTransferProgress = progress =>
                                 {
-                                    FileConflictStrategy = CheckoutFileConflictStrategy.Normal,
-                                    OnCheckoutProgress = (path, completedSteps, totalSteps) =>
-                                    {
-                                        setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
-                                    }
+                                    setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                                    return true;
                                 },
                             });
+
+                            this.Checkout(repo, headId, setProgress);
+
                         }, 2500).ShowDialog();
 
                         bool hasBeenUpdated = false;
