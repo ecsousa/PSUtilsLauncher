@@ -58,5 +58,14 @@ namespace PSUtilsLauncher.Properties {
                 return ((bool)(this["AutoUpdateModule"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("http://ecsousa.github.io/current-psutilslaucnher-version.txt")]
+        public string SelfUpdateInfo {
+            get {
+                return ((string)(this["SelfUpdateInfo"]));
+            }
+        }
     }
 }

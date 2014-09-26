@@ -14,5 +14,8 @@
     <Setting Name="AutoUpdateModule" Type="System.Boolean" Scope="Application">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="SelfUpdateInfo" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">http://ecsousa.github.io/current-psutilslaucnher-version.txt</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

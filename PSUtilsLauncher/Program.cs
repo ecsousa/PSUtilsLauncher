@@ -34,12 +34,14 @@ namespace PSUtilsLauncher
         {
             try
             {
-
                 if(args.Length > 0 && args[0] == "clean")
                 {
                     Clean(args);
                     return;
                 }
+
+                if(Updater.Check())
+                    return;
 
                 AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
 
