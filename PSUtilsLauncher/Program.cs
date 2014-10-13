@@ -282,7 +282,8 @@ namespace PSUtilsLauncher
                     {
                         OnTransferProgress = progress =>
                         {
-                            setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                            if(progress.TotalObjects > 0)
+                                setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
                             return true;
                         },
                         OnCheckoutProgress = (path, completedSteps, totalSteps) =>
@@ -356,7 +357,8 @@ namespace PSUtilsLauncher
                     {
                         OnTransferProgress = progress =>
                         {
-                            setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                            if(progress.TotalObjects > 0)
+                                setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
                             return true;
                         },
                     },
@@ -365,7 +367,8 @@ namespace PSUtilsLauncher
                         FileConflictStrategy = CheckoutFileConflictStrategy.Normal,
                         OnCheckoutProgress = (path, completedSteps, totalSteps) =>
                         {
-                            setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
+                            if(totalSteps > 0)
+                                setProgress("Checking out files [2/2]", 100 * completedSteps / totalSteps);
                         }
                     }
                 });
@@ -420,7 +423,8 @@ namespace PSUtilsLauncher
                             {
                                 OnTransferProgress = progress =>
                                 {
-                                    setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
+                                    if(progress.TotalObjects > 0)
+                                        setProgress("Transfering repository [1/2]", 100 * progress.ReceivedObjects / progress.TotalObjects);
                                     return true;
                                 },
                             });
