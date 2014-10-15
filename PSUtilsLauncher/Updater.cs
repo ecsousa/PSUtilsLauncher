@@ -13,12 +13,10 @@ namespace PSUtilsLauncher
     {
         public static bool Check()
         {
-            var tempPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "PSUtils");
-            var tempFile = Path.Combine(tempPath, "old-version");
+            var destination = typeof(Updater).Assembly.Location;
+            var tempFile = destination + ".old-version";
 
-            if(!Directory.Exists(tempPath))
-                Directory.CreateDirectory(tempPath);
-            else if(File.Exists(tempFile))
+            if(File.Exists(tempFile))
             {
                 System.Threading.Thread.Sleep(300);
                 File.Delete(tempFile);
@@ -47,7 +45,6 @@ namespace PSUtilsLauncher
 
                 if(serverVersion.Version > typeof(Updater).Assembly.GetName().Version)
                 {
-                    var destination = typeof(Updater).Assembly.Location;
                     byte[] data = null;
 
                     var progess = new ProgressForm("Updating PSUtilsLauncher", setProgress =>
