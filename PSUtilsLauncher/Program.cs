@@ -17,6 +17,7 @@ namespace PSUtilsLauncher
 {
     class Program
     {
+        private string StartupDirectory;
         private string MyDirectory;
         private Properties.Settings Settings;
         private string PSUtilsPath;
@@ -40,12 +41,9 @@ namespace PSUtilsLauncher
                     return;
                 }
 
-                if(Updater.Check())
-                    return;
-
                 AppDomain.CurrentDomain.AssemblyResolve += OnResolveAssembly;
 
-                new Program().Run();
+                new Program().Run(args);
             }
             catch(Exception ex)
             {
@@ -108,10 +106,23 @@ namespace PSUtilsLauncher
             }
         }
 
-        private void Run()
+        private void Run(string[] args)
         {
+            if(args.Length > 1 && args[0].ToLower().StartsWith("-dir"))
+            {
+                this.StartupDirectory = args[1];
+                this.NetworkExecution = true;
+            }
+            else
+            {
+                this.StartupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                this.NetworkExecution = new Uri(this.MyDirectory).IsUnc;
+            }
+            
+            if(!this.NetworkExecution && Updater.Check())
+                    return;
+
             this.MyDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            this.NetworkExecution = new Uri(this.MyDirectory).IsUnc;
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
@@ -467,7 +478,7 @@ namespace PSUtilsLauncher
             var arguments = string.Format("/LoadCfgFile \"{0}\"", Path.Combine(this.PSUtilsPath, "ConEmu.xml"));
 
             this.WriteMessages();
-            this.ExecuteProcess(this.ConEmuExecutable, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), true);
+            this.ExecuteProcess(this.ConEmuExecutable, arguments, this.StartupDirectory, true);
         }
 
         private void StartWithPowerShell()
@@ -475,7 +486,7 @@ namespace PSUtilsLauncher
             var arguments = string.Format("-ExecutionPolicy {0} -NoExit -Command \"Import-Module '{1}'\"", this.Settings.ExecutionPolicy, this.PSUtilsPath);
 
             this.WriteMessages();
-            this.ExecuteProcess(this.PowerShellPath, arguments, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), true);
+            this.ExecuteProcess(this.PowerShellPath, arguments, this.StartupDirectory, true);
 
         }
 
