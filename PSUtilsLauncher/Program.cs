@@ -121,6 +121,8 @@ namespace PSUtilsLauncher
                 this.StartupDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 this.NetworkExecution = new Uri(this.MyDirectory).IsUnc;
             }
+
+            MessageBox.Show(this.StartupDirectory);
             
             if(!this.NetworkExecution && Updater.Check())
                     return;
@@ -178,6 +180,10 @@ namespace PSUtilsLauncher
         {
             if(this.NetworkExecution)
                 return;
+
+            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Drive\shell\psutils", "", "Start PS&Utils here");
+            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Drive\shell\psutils\command", "",
+                string.Format("\"{0}\" -dir %V", typeof(Updater).Assembly.Location.Replace("\\", "\\\\")));
 
             Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Directory\shell\psutils", "", "Start PS&Utils here");
             Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Directory\shell\psutils\command", "",
