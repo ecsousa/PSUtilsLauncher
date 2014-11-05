@@ -12,6 +12,7 @@ using System.Windows.Forms;
 using System.IO.Compression;
 using System.Threading;
 using System.Text.RegularExpressions;
+using Microsoft.Win32;
 
 namespace PSUtilsLauncher
 {
@@ -108,6 +109,8 @@ namespace PSUtilsLauncher
 
         private void Run(string[] args)
         {
+            this.MyDirectory = AppDomain.CurrentDomain.BaseDirectory;
+
             if(args.Length > 1 && args[0].ToLower().StartsWith("-dir"))
             {
                 this.StartupDirectory = args[1];
@@ -122,7 +125,6 @@ namespace PSUtilsLauncher
             if(!this.NetworkExecution && Updater.Check())
                     return;
 
-            this.MyDirectory = AppDomain.CurrentDomain.BaseDirectory;
             this.Settings = PSUtilsLauncher.Properties.Settings.Default;
             this.PSUtilsPath = Path.Combine(this.MyDirectory, "PSUtils");
             this.ConEmuPath = Path.Combine(this.MyDirectory, "ConEmu");
@@ -149,6 +151,8 @@ namespace PSUtilsLauncher
                     return;
                 }
 
+                this.CreateStartupRegistry();
+
                 if(!File.Exists(this.ConEmuExecutable))
                 {
                     if(MessageBox.Show("ConEmu not found. Do you want to download int? (otherwise, default Windows console will be used)", "PSUtils Launcher", MessageBoxButtons.YesNo) == DialogResult.No)
@@ -168,6 +172,16 @@ namespace PSUtilsLauncher
                     this.LaunchCleaner();
             }
 
+        }
+
+        private void CreateStartupRegistry()
+        {
+            if(this.NetworkExecution)
+                return;
+
+            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Directory\shell\psutils", "", "Start PS&Utils here");
+            Registry.SetValue(@"HKEY_CURRENT_USER\Software\Classes\Directory\shell\psutils\command", "",
+                string.Format("\"{0}\" -dir \"%L\"", typeof(Updater).Assembly.Location.Replace("\\", "\\\\")));
         }
 
         private void DownloadConemu()
