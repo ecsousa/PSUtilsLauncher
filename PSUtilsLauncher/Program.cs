@@ -122,8 +122,6 @@ namespace PSUtilsLauncher
                 this.NetworkExecution = new Uri(this.MyDirectory).IsUnc;
             }
 
-            MessageBox.Show(this.StartupDirectory);
-            
             if(!this.NetworkExecution && Updater.Check())
                     return;
 
